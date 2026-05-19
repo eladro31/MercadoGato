@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Gato | Tu Marketplace de confianza</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --mg-verde-dark: #0a120b; /* Fondo principal */
+            --mg-panel: #121f14;      /* Paneles y tarjetas */
+            --mg-verde-neon: #39ff14; /* Detalles, éxitos y precios */
+            --mg-azul: #0070f3;       /* Botones secundarios y enlaces */
+            --mg-texto: #ffffff;
+            --mg-gris: #a0aec0;
+            --mg-rojo: #ff4444;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--mg-verde-dark);
+            color: var(--mg-texto);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: rgba(18, 31, 20, 0.95);
+            border-bottom: 2px solid var(--mg-verde-neon);
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            box-sizing: border-box;
+        }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo span { color: var(--mg-verde-neon); }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .nav-links button {
+            background: none;
+            border: 1px solid var(--mg-azul);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .nav-links button:hover {
+            background: var(--mg-azul);
+            box-shadow: 0 0 12px rgba(0, 112, 243, 0.5);
+        }
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-family: monospace;
+            background: rgba(57, 255, 20, 0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--mg-verde-neon);
+        }
+
+        /* Contenedor Principal */
+        .main-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        /* Sección de Publicación rápida */
+        .publish-box {
+            background: var(--mg-panel);
+            border: 1px solid #1e3522;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+        .grid-publish {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        /* Inputs Generales */
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 4px;
+            border-radius: 6px;
+            background: #070c08;
+            color: #fff;
+            border: 1px solid #1e3522;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--mg-verde-neon);
+        }
+        label {
+            font-size: 0.8rem;
+            color: var(--mg-gris);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .btn-gato {
+            background: var(--mg-verde-neon);
+            color: #000;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.3s;
+            width: 100%;
+        }
+        .btn-gato:hover {
+            background: #2cd410;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+        }
+
+        /* Catálogo de Productos (Estilo Mercado Libre) */
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--mg-azul);
+            padding-left: 10px;
+        }
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+        .product-card {
+            background: var(--mg-panel);
+            border: 1px solid #1e3522;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: 0.3s;
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--mg-verde-neon);
+        }
+        .product-img {
+            width: 100%;
+            height: 180px;
+            background: #070c08;
+            object-fit: cover;
+        }
+        .product-body {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+        .product-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            line-height: 1.4;
+        }
+        .product-seller {
+            font-size: 0.75rem;
+            color: var(--mg-gris);
+        }
+        .product-price {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--mg-verde-neon);
+            font-family: monospace;
+            margin-top: auto;
+        }
+
+        /* Modales */
+        .mg-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+        .modal-box {
+            background: var(--mg-panel);
+            border: 1px solid var(--mg-verde-neon);
+            padding: 20px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body onload="inicializarMercadoGato()">
+
+    <div class="navbar">
+        <div class="logo" onclick="location.reload()">
+            🛒 Mercado<span>Gato</span>
+        </div>
+        
+        <div class="nav-links">
+            <div id="auth-guest-zone" style="display: flex; gap: 10px;">
+                <button onclick="abrirAuth('login')">Ingresar</button>
+                <button onclick="abrirAuth('registro')" style="border-color: var(--mg-verde-neon); color: var(--mg-verde-neon);">Registrarse</button>
+            </div>
+            <div id="auth-user-zone" class="user-info">
+                <span id="display-username" style="color: white; font-weight: bold;">---</span>
+                <span id="display-balance" style="color: var(--mg-verde-neon); font-weight: bold;">R$ 0</span>
+                <button onclick="cerrarSesion()" style="background: var(--mg-rojo); border: none; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; color: white;">Salir</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        
+        <div class="publish-box">
+            <div class="section-title" style="border-color: var(--mg-verde-neon);">🚀 Publicar un artículo nuevo</div>
+            
+            <div id="lock-publish-msg" style="color: var(--mg-gris); font-size: 0.9rem; margin-bottom: 10px; font-style: italic;">
+                ⚠️ Debes iniciar sesión en Mercado Gato para poder vender productos.
+            </div>
+
+            <div id="publish-form-elements" style="display: none;">
+                <div class="grid-publish">
+                    <div>
+                        <label>¿Qué estás vendiendo?</label>
+                        <input type="text" id="prod-titulo" placeholder="Ej: Limited Shaggy, Cuenta de Blox Fruits...">
+                    </div>
+                    <div>
+                        <label>Precio de salida (R$)</label>
+                        <input type="number" id="prod-precio" placeholder="500">
+                    </div>
+                    <div>
+                        <label>URL de Imagen Ilustrativa (Opcional)</label>
+                        <input type="text" id="prod-img" placeholder="https://enlace-de-tu-foto.png">
+                    </div>
+                </div>
+                <button class="btn-gato" onclick="publicarArticulo()">Poner a la Venta</button>
+            </div>
+        </div>
+
+        <div class="section-title">📦 Publicaciones recientes en la red</div>
+        <div id="catalogo-productos" class="products-grid">
+            <p style="color: var(--mg-gris); font-size: 0.9rem;">Cargando inventarios del marketplace...</p>
+        </div>
+    </div>
+
+    <div id="modal-auth" class="mg-modal">
+        <div class="modal-box">
+            <h3 id="auth-titulo" style="margin-top:0; color: var(--mg-verde-neon);">Ingresar a Mercado Gato</h3>
+            <label>Correo Electrónico:</label>
+            <input type="email" id="auth-email" placeholder="tu-usuario@nexus.com">
+            <label>Contraseña:</label>
+            <input type="password" id="auth-pass" placeholder="••••••••">
+            
+            <div id="auth-btn-wrapper" style="margin-top:15px;"></div>
+            <button class="btn-gato" style="background:#222; color:#fff; margin-top:8px; font-size:0.8rem;" onclick="cerrarAuth()">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        // Mismo clúster e ID de base de datos que la red TransportN para unificar los R$
+        const firebaseConfig = { apiKey: "AIzaSyA58MXpItx1F9zNnJbyeS_4FT_onYx9wig", authDomain: "uqt-virtual.firebaseapp.com", projectId: "uqt-virtual", storageBucket: "uqt-virtual.appspot.com", messagingSenderId: "777641217730", appId: "1:777641217730:web:8c5b5f9b4c7d8e2a" };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let uidLogueado = null;
+        let emailLogueado = null;
+
+        function inicializarMercadoGato() {
+            // Monitoreo de sesión e inyección de billetera BancoGato
+            auth.onAuthStateChanged(user => {
+                const gZone = document.getElementById('auth-guest-zone');
+                const uZone = document.getElementById('auth-user-zone');
+                const lockMsg = document.getElementById('lock-publish-msg');
+                const formFields = document.getElementById('publish-form-elements');
+
+                if(user) {
+                    uidLogueado = user.uid;
+                    emailLogueado = user.email;
+                    gZone.style.display = 'none';
+                    uZone.style.display = 'flex';
+                    lockMsg.style.display = 'none';
+                    formFields.style.display = 'block';
+                    document.getElementById('display-username').innerText = user.email.split('@')[0].toUpperCase();
+                    
+                    // Conexión directa a la caja de ahorros unificada de BancoGato
+                    db.collection('usuarios_banco').doc(user.uid).onSnapshot(doc => {
+                        if(doc.exists) {
+                            const saldo = doc.data().saldo || 0;
+                            document.getElementById('display-balance').innerText = `R$ ${saldo.toLocaleString()}`;
+                        }
+                    });
+                } else {
+                    uidLogueado = null;
+                    emailLogueado = null;
+                    gZone.style.display = 'flex';
+                    uZone.style.display = 'none';
+                    lockMsg.style.display = 'block';
+                    formFields.style.display = 'none';
+                }
+            });
+
+            // Escucha activa de productos en venta
+            db.collection('mercadogato_productos').orderBy('fechaPublicacion', 'desc').onSnapshot(snap => {
+                const contenedor = document.getElementById('catalogo-productos');
+                if(snap.empty) {
+                    contenedor.innerHTML = `<p style="color: var(--mg-gris); font-size: 0.9rem;">No hay artículos publicados en este momento. ¡Sé el primero!</p>`;
+                    return;
+                }
+
+                contenedor.innerHTML = "";
+                snap.forEach(doc => {
+                    const p = doc.data();
+                    const pId = doc.id;
+                    const fallbackImg = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=400";
+                    const imgUrl = p.imagenUrl ? p.imagenUrl : fallbackImg;
+
+                    contenedor.innerHTML += `
+                        <div class="product-card">
+                            <img src="${imgUrl}" class="product-img" onerror="this.src='${fallbackImg}'">
+                            <div class="product-body">
+                                <p class="product-seller">Vendedor: ${p.vendedorEmail.split('@')[0]}</p>
+                                <h4 class="product-title">${p.titulo}</h4>
+                                <div class="product-price">R$ ${parseFloat(p.precio).toLocaleString()}</div>
+                                <button class="btn-gato" style="margin-top: 10px; font-size:0.8rem; background: var(--mg-azul); color: white;" onclick="procesarCompraMercado('${pId}', ${p.precio}, '${p.vendedorUid}', '${p.titulo}')">Comprar Ahora</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        // AGREGAR ARTÍCULO (Solo permitido con Login)
+        function publicarArticulo() {
+            if(!uidLogueado) return alert("Acción restringida. Inicia sesión.");
+
+            const titulo = document.getElementById('prod-titulo').value.trim();
+            const precio = parseFloat(document.getElementById('prod-precio').value);
+            const imagenUrl = document.getElementById('prod-img').value.trim();
+
+            if(!titulo || isNaN(precio) || precio <= 0) {
+                return alert("Por favor, ingresa un nombre válido y un precio mayor a 0.");
+            }
+
+            db.collection('mercadogato_productos').add({
+                vendedorUid: uidLogueado,
+                vendedorEmail: emailLogueado,
+                titulo: titulo,
+                precio: precio,
+                imagenUrl: imagenUrl,
+                fechaPublicacion: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                alert("¡Tu producto ya está listado en Mercado Gato!");
+                document.getElementById('prod-titulo').value = "";
+                document.getElementById('prod-precio').value = "";
+                document.getElementById('prod-img').value = "";
+            }).catch(e => alert("Error al subir el artículo: " + e));
+        }
+
+        // COMPRAR ARTÍCULO (Verifica fondos del comprador y acredita al vendedor instantáneamente)
+        async function procesarCompraMercado(prodId, precio, vendedorUid, tituloProducto) {
+            if(!uidLogueado) {
+                return alert("Para comprar en Mercado Gato primero debes registrar tu Cuenta Global.");
+            }
+
+            if(uidLogueado === vendedorUid) {
+                return alert("No podés comprarte un artículo a vos mismo, crack.");
+            }
+
+            if(!confirm(`¿Confirmas la compra de "${tituloProducto}" por R$ ${precio}?`)) return;
+
+            const compradorRef = db.collection('usuarios_banco').doc(uidLogueado);
+            const vendedorRef = db.collection('usuarios_banco').doc(vendedorUid);
+
+            try {
+                await db.runTransaction(async (transaction) => {
+                    const compDoc = await transaction.get(compradorRef);
+                    if(!compDoc.exists) throw "Tu cuenta no figura en el BancoGato.";
+
+                    const saldoComprador = compDoc.data().saldo || 0;
+                    if(saldoComprador < precio) throw "Fondos insuficientes en tu cuenta de Robux.";
+
+                    // Descontar al comprador
+                    transaction.update(compradorRef, { saldo: saldoComprador - precio });
+
+                    // Acreditar al vendedor
+                    const vendDoc = await transaction.get(vendedorRef);
+                    if(vendDoc.exists) {
+                        const saldoVendedor = vendDoc.data().saldo || 0;
+                        transaction.update(vendedorRef, { saldo: saldoVendedor + precio });
+                    } else {
+                        // Si el vendedor no tiene cuenta inicializada, se la crea con el saldo del artículo
+                        transaction.set(vendedorRef, { saldo: precio }, { merge: true });
+                    }
+
+                    // Eliminar producto de la venta activa
+                    transaction.delete(db.collection('mercadogato_productos').doc(prodId));
+                });
+
+                // Registrar movimientos en el ledger general
+                await db.collection('movimientos_banco').add({
+                    uid: uidLogueado,
+                    actividad: `Compra MercadoGato: ${tituloProducto}`,
+                    monto: precio,
+                    tipo: 'salida',
+                    fecha: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                await db.collection('movimientos_banco').add({
+                    uid: vendedorUid,
+                    actividad: `Venta MercadoGato: ${tituloProducto}`,
+                    monto: precio,
+                    tipo: 'entrada',
+                    fecha: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert("¡Transacción exitosa! El saldo fue transferido al vendedor y el artículo es tuyo.");
+
+            } catch (err) {
+                alert("Operación rechazada: " + err);
+            }
+        }
+
+        // MÓDULO AUTENTICACIÓN
+        function abrirAuth(modo) {
+            const modal = document.getElementById('modal-auth');
+            const titulo = document.getElementById('auth-titulo');
+            const wrapper = document.getElementById('auth-btn-wrapper');
+            modal.style.display = 'flex';
+
+            if(modo === 'login') {
+                titulo.innerText = "Ingresar a Mercado Gato";
+                wrapper.innerHTML = `<button class="btn-gato" onclick="login()">Entrar</button>`;
+            } else {
+                titulo.innerText = "Registrar nueva Cuenta Global";
+                wrapper.innerHTML = `<button class="btn-gato" style="background:var(--mg-azul); color:white;" onclick="registro()">Crear Cuenta</button>`;
+            }
+        }
+        function cerrarAuth() { document.getElementById('modal-auth').style.display = 'none'; }
+
+        function login() {
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-pass').value;
+            if(!email || !pass) return alert("Completa los campos.");
+            auth.signInWithEmailAndPassword(email, pass).then(() => { cerrarAuth(); }).catch(e => alert(e.message));
+        }
+
+        function registro() {
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-pass').value;
+            if(!email || !pass) return alert("Completa los campos.");
+            auth.createUserWithEmailAndPassword(email, pass).then(async (res) => {
+                await db.collection('usuarios_banco').doc(res.user.uid).set({
+                    alias: email.split('@')[0], email: email, saldo: 2000 // Bono de bienvenida inicial
+                }, { merge: true });
+                cerrarAuth();
+            }).catch(e => alert(e.message));
+        }
+
+        function cerrarSesion() { auth.signOut(); }
+    </script>
+</body>
+</html>
